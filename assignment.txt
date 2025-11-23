@@ -1,0 +1,231 @@
+Задание: Изработка на фронт-енд за MealPlanner приложение (Next.js)
+
+Обща концепция
+
+Трябва да се изгради модерно, бързо и красиво уеб приложение на Next.js,
+което работи с MealPlanner Web API. Интерфейсът е изцяло на български
+език. Дизайнът трябва да бъде съвременен, чист, с плавни анимации
+благодарение на Framer Motion.
+
+Основни модули
+
+1.  Управление на потребители
+2.  Управление на категории
+3.  Управление на съставки
+4.  Управление на рецепти
+5.  Управление на планове за хранене
+6.  Визуализации на рецепти и планове
+
+API – Пълно описание на endpoint-и
+
+🧍‍♂️ Users API
+
+GET /api/users – връща всички потребители
+GET /api/users/{id} – връща потребител по ID
+POST /api/users – създава потребител (CreateUpdateUserDto)
+PUT /api/users/{id} – редактира потребител
+DELETE /api/users/{id} – изтрива
+POST /api/users/login – логин с username + password
+
+------------------------------------------------------------------------
+
+🏷 Categories API
+
+GET /api/categories
+GET /api/categories/{id}
+POST /api/categories
+PUT /api/categories/{id}
+DELETE /api/categories/{id}
+
+------------------------------------------------------------------------
+
+🍅 Ingredients API
+
+GET /api/ingredients
+GET /api/ingredients/{id}
+POST /api/ingredients
+PUT /api/ingredients/{id}
+DELETE /api/ingredients/{id}
+
+------------------------------------------------------------------------
+
+🍳 Recipes API
+
+GET /api/recipes
+GET /api/recipes/{id}
+POST /api/recipes
+PUT /api/recipes/{id}
+DELETE /api/recipes/{id}
+
+Ingredients to Recipe (интегрирано)
+
+GET /api/recipes/{recipeId}/ingredients
+POST /api/recipes/{recipeId}/ingredients
+DELETE /api/recipes/{recipeId}/ingredients/{ingredientId}
+
+------------------------------------------------------------------------
+
+📅 MealPlans API
+
+GET /api/mealplans
+GET /api/mealplans/{id}
+POST /api/mealplans
+PUT /api/mealplans/{id}
+DELETE /api/mealplans/{id}
+
+Recipes in MealPlan
+
+GET /api/mealplans/{mealPlanId}/recipes
+POST /api/mealplans/{mealPlanId}/recipes
+DELETE
+/api/mealplans/{mealPlanId}/recipes/{recipeId}/{dayOfWeek}/{mealType}
+
+------------------------------------------------------------------------
+
+Фронт-енд изисквания (Next.js)
+
+Страници
+
+-   Начална страница – модерна визия, анимации с Framer Motion
+-   Страници за CRUD операции за:
+    -   Потребители
+    -   Категории
+    -   Съставки
+    -   Рецепти
+    -   Планове за хранене
+-   Страница с детайли за рецепта – със списък на съставките
+-   Страница „Седмичен план“ – визуално подредена по дни и хранене
+
+UI изисквания
+
+-   Модерен UI (може Shadcn/UI или Tailwind CSS)
+-   Всичко е на български език
+-   Използвай Framer Motion за:
+    -   hover анимации
+    -   smooth transitions между страници
+    -   fade-in при зареждане
+-   Тъмна и светла тема (по избор)
+
+State Management
+
+-   React Query или SWR за работа с API
+-   Глобални състояния при нужда (Zustand/Context)
+
+Формуляри
+
+-   React Hook Form + Zod (по желание)
+-   Валидация на полета според DTO-тата
+
+Архитектура
+
+-   Чисто разделение:
+    -   /app/(routes) – страници
+    -   /components – UI компоненти
+    -   /services – API заявки
+    -   /types – DTO интерфейси
+-   Консистентен дизайн и унифицирани компоненти (buttons, inputs,
+    cards)
+
+------------------------------------------------------------------------
+
+Основни цели
+
+-   Красив, плавен, модерен интерфейс
+-   Бърз рендеринг (SSR/ISR оптимизации когато е удачно)
+-   Перфектно интегриране на всички API endpoint-и
+-   Пълно CRUD покритие за всички таблици
+-   Силно UX ориентиран подход
+
+User DTOs
+
+-   UserDto
+-   CreateUpdateUserDto
+
+Category DTOs
+
+-   CategoryDto
+-   CreateUpdateCategoryDto
+-   UpdateCategoryDto
+
+Ingredient DTOs
+
+-   IngredientDto
+-   CreateIngredientDto
+-   UpdateIngredientDto
+
+Recipe DTOs
+
+-   RecipeDto
+-   CreateUpdateRecipeDto
+-   RecipeIngredientDto
+-   AddOrUpdateRecipeIngredientDto
+
+MealPlan DTOs
+
+-   MealPlanDto
+-   CreateUpdateMealPlanDto
+-   MealPlanRecipeDto
+-   AddOrUpdateMealPlanRecipeDto
+
+Структура на DTO моделите
+
+UserDto
+
+Id: number Username: string Email: string
+
+CreateUpdateUserDto
+
+Username: string Email: string Password?: string
+
+CategoryDto
+
+Id: number Name: string Description?: string
+
+CreateUpdateCategoryDto
+
+Name: string Description?: string
+
+IngredientDto
+
+Id: number Name: string Unit: string
+
+CreateIngredientDto / UpdateIngredientDto
+
+Name: string Unit: string
+
+RecipeDto
+
+Id: number Name: string Instructions: string CookingTimeMinutes: number
+CategoryId: number AuthorUserId: number
+
+CreateUpdateRecipeDto
+
+Name: string Instructions: string CookingTimeMinutes: number CategoryId:
+number AuthorUserId: number
+
+RecipeIngredientDto
+
+RecipeId: number IngredientId: number Quantity: number IngredientName:
+string Unit: string
+
+AddOrUpdateRecipeIngredientDto
+
+IngredientId: number Quantity: number
+
+MealPlanDto
+
+Id: number UserId: number Name: string StartDate: string EndDate: string
+
+CreateUpdateMealPlanDto
+
+UserId: number Name: string StartDate: string EndDate: string
+
+MealPlanRecipeDto
+
+RecipeId: number DayOfWeek: number MealType: string RecipeName: string
+CookingTimeMinutes: number
+
+AddOrUpdateMealPlanRecipeDto
+
+RecipeId: number DayOfWeek: number MealType: string
+
