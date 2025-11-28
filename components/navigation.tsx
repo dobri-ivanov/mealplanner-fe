@@ -11,9 +11,12 @@ import { cn } from "@/lib/utils"
 import { useAuthStore } from "@/lib/auth-store"
 import { useRouter } from "next/navigation"
 
-const navItems = [
+const publicNavItems = [
   { href: "/", label: "Начало", icon: Home },
-  { href: "/dashboard", label: "Dashboard", icon: Home },
+]
+
+const protectedNavItems = [
+  { href: "/dashboard", label: "Табло", icon: Home },
   { href: "/categories", label: "Категории", icon: Tag },
   { href: "/ingredients", label: "Съставки", icon: Apple },
   { href: "/recipes", label: "Рецепти", icon: ChefHat },
@@ -45,7 +48,30 @@ export function Navigation() {
               MealPlanner
             </Link>
             <div className="hidden md:flex items-center gap-1">
-              {navItems.map((item) => {
+              {publicNavItems.map((item) => {
+                const Icon = item.icon
+                const isActive = pathname === item.href
+                return (
+                  <Link key={item.href} href={item.href}>
+                    <motion.div
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      <Button
+                        variant={isActive ? "default" : "ghost"}
+                        className={cn(
+                          "gap-2",
+                          isActive && "bg-primary text-primary-foreground"
+                        )}
+                      >
+                        <Icon className="h-4 w-4" />
+                        {item.label}
+                      </Button>
+                    </motion.div>
+                  </Link>
+                )
+              })}
+              {isAuthenticated && protectedNavItems.map((item) => {
                 const Icon = item.icon
                 const isActive = pathname === item.href
                 return (

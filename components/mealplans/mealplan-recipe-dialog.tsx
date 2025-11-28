@@ -27,14 +27,25 @@ import {
 import type { MealPlanRecipeDto, AddOrUpdateMealPlanRecipeDto, RecipeDto } from '@/types'
 
 const DAYS_OF_WEEK = [
-  'Неделя',
   'Понеделник',
   'Вторник',
   'Сряда',
   'Четвъртък',
   'Петък',
   'Събота',
+  'Неделя',
 ]
+
+// Helper функции за конвертиране между UI индекси (0=Понеделник) и API индекси (0=Неделя)
+// UI: Понеделник=0, Вторник=1, ..., Неделя=6
+// API: Неделя=0, Понеделник=1, ..., Събота=6
+const uiToApiDay = (uiIndex: number): number => {
+  return uiIndex === 6 ? 0 : uiIndex + 1
+}
+
+const apiToUiDay = (apiIndex: number): number => {
+  return apiIndex === 0 ? 6 : apiIndex - 1
+}
 
 const MEAL_TYPES = ['Закуска', 'Обяд', 'Вечеря', 'Снакс']
 
@@ -87,13 +98,13 @@ export function MealPlanRecipeDialog({
     if (recipe) {
       reset({
         recipeId: recipe.recipeId,
-        dayOfWeek: recipe.dayOfWeek,
+        dayOfWeek: recipe.dayOfWeek, // API индекс
         mealType: recipe.mealType,
       })
     } else {
       reset({
         recipeId: 0,
-        dayOfWeek: defaultDay ?? 0,
+        dayOfWeek: defaultDay ?? 1, // API индекс (1 = Понеделник)
         mealType: defaultMealType || '',
       })
     }
@@ -120,17 +131,58 @@ export function MealPlanRecipeDialog({
     },
   })
 
-  const onSubmit = (data: RecipeFormData) => {
-    const recipeData: AddOrUpdateMealPlanRecipeDto = {
-      recipeId: data.recipeId,
-      dayOfWeek: data.dayOfWeek,
-      mealType: data.mealType,
-    }
+  const updateMutation = useMutation({
+    mutationFn: async (data: RecipeFormData) => {
+      // При редактиране първо изтриваме старата рецепта, след това добавяме новата
+      if (recipe) {
+        await mealPlanService.deleteRecipe(
+          mealPlanId,
+          recipe.recipeId,
+          recipe.dayOfWeek,
+          recipe.mealType
+        )
+      }
+      const recipeData: AddOrUpdateMealPlanRecipeDto = {
+        recipeId: data.recipeId,
+        dayOfWeek: data.dayOfWeek,
+        mealType: data.mealType,
+      }
+      return mealPlanService.addRecipe(mealPlanId, recipeData)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['mealplans', mealPlanId, 'recipes'] })
+      toast({
+        title: 'Успешно редактиране',
+        description: 'Рецептата е обновена в плана',
+      })
+      onOpenChange(false)
+      reset()
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Грешка',
+        description: error.message || 'Неуспешно редактиране на рецепта',
+        variant: 'destructive',
+      })
+    },
+  })
 
-    addMutation.mutate(recipeData)
+  const onSubmit = (data: RecipeFormData) => {
+    if (recipe) {
+      // При редактиране използваме updateMutation
+      updateMutation.mutate(data)
+    } else {
+      // При добавяне използваме addMutation
+      const recipeData: AddOrUpdateMealPlanRecipeDto = {
+        recipeId: data.recipeId,
+        dayOfWeek: data.dayOfWeek,
+        mealType: data.mealType,
+      }
+      addMutation.mutate(recipeData)
+    }
   }
 
-  const isLoading = addMutation.isPending
+  const isLoading = addMutation.isPending || updateMutation.isPending
   const recipeId = watch('recipeId')
   const dayOfWeek = watch('dayOfWeek')
   const mealType = watch('mealType')
@@ -175,17 +227,21 @@ export function MealPlanRecipeDialog({
             <Select
               value={dayOfWeek?.toString() || ''}
               onValueChange={(value) => setValue('dayOfWeek', parseInt(value))}
-              disabled={isLoading || !!recipe}
+              disabled={isLoading}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Изберете ден" />
               </SelectTrigger>
               <SelectContent>
-                {DAYS_OF_WEEK.map((day, index) => (
-                  <SelectItem key={index} value={index.toString()}>
-                    {day}
-                  </SelectItem>
-                ))}
+                {DAYS_OF_WEEK.map((day, uiIndex) => {
+                  const apiIndex = uiToApiDay(uiIndex)
+                  const isSelected = dayOfWeek === apiIndex
+                  return (
+                    <SelectItem key={uiIndex} value={apiIndex.toString()}>
+                      {day}
+                    </SelectItem>
+                  )
+                })}
               </SelectContent>
             </Select>
             {errors.dayOfWeek && (
@@ -198,7 +254,7 @@ export function MealPlanRecipeDialog({
             <Select
               value={mealType || ''}
               onValueChange={(value) => setValue('mealType', value)}
-              disabled={isLoading || !!recipe}
+              disabled={isLoading}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Изберете тип хранене" />

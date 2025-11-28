@@ -147,15 +147,42 @@ export default function MealPlanDetailPage() {
         animate={{ opacity: 1, y: 0 }}
         className="space-y-4"
       >
-        <div>
-          <h1 className="text-3xl font-bold">{mealPlan.name}</h1>
-          <p className="text-muted-foreground mt-2">
-            {format(new Date(mealPlan.startDate), 'dd MMM yyyy', { locale: bg })} -{' '}
-            {format(new Date(mealPlan.endDate), 'dd MMM yyyy', { locale: bg })}
-          </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">{mealPlan.name}</h1>
+            <p className="text-muted-foreground mt-2">
+              {format(new Date(mealPlan.startDate), 'dd MMM yyyy', { locale: bg })} -{' '}
+              {format(new Date(mealPlan.endDate), 'dd MMM yyyy', { locale: bg })}
+            </p>
+          </div>
+          <Button
+            onClick={async () => {
+              if (mealPlan && recipes) {
+                try {
+                  await exportMealPlanToPDF(mealPlan, recipes)
+                  toast({
+                    title: 'Успешно експортиране',
+                    description: 'Планът за хранене е експортиран като PDF',
+                  })
+                } catch (error) {
+                  toast({
+                    title: 'Грешка',
+                    description: 'Неуспешно експортиране на PDF',
+                    variant: 'destructive',
+                  })
+                }
+              }
+            }}
+            className="gap-2"
+            disabled={!mealPlan || !recipes || recipesLoading}
+          >
+            <Download className="h-4 w-4" />
+            Експортирай PDF
+          </Button>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-7 gap-4">
+        <div className="mt-8">
+          <div className="grid grid-cols-1 lg:grid-cols-7 gap-4">
           {DAYS_OF_WEEK.map((day, dayIndex) => (
             <Card key={dayIndex}>
               <CardHeader>
@@ -166,13 +193,13 @@ export default function MealPlanDetailPage() {
                   const dayRecipes = getRecipesForDayAndMeal(dayIndex, mealType)
                   return (
                     <div key={mealType} className="space-y-2">
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
                         <h4 className="text-sm font-medium">{mealType}</h4>
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => handleAddRecipe(dayIndex, mealType)}
-                          className="h-7 px-2 gap-1 text-xs"
+                          className="h-6 px-1.5 gap-1 text-xs"
                         >
                           <Plus className="h-3 w-3" />
                           Добави
@@ -221,6 +248,7 @@ export default function MealPlanDetailPage() {
               </CardContent>
             </Card>
           ))}
+          </div>
         </div>
       </motion.div>
 

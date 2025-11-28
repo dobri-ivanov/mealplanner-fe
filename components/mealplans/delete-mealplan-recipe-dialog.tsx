@@ -13,14 +13,19 @@ import {
 import type { MealPlanRecipeDto } from '@/types'
 
 const DAYS_OF_WEEK = [
-  'Неделя',
   'Понеделник',
   'Вторник',
   'Сряда',
   'Четвъртък',
   'Петък',
   'Събота',
+  'Неделя',
 ]
+
+// Helper функция за конвертиране от API индекс (0=Неделя) към UI индекс (0=Понеделник)
+const apiToUiDay = (apiIndex: number): number => {
+  return apiIndex === 0 ? 6 : apiIndex - 1
+}
 
 interface DeleteMealPlanRecipeDialogProps {
   open: boolean
@@ -43,7 +48,7 @@ export function DeleteMealPlanRecipeDialog({
           <AlertDialogDescription>
             Това действие не може да бъде отменено. Това ще премахне рецептата{' '}
             <strong>{recipe?.recipeName}</strong> от{' '}
-            <strong>{DAYS_OF_WEEK[recipe?.dayOfWeek || 0]}</strong> -{' '}
+            <strong>{DAYS_OF_WEEK[apiToUiDay(recipe?.dayOfWeek || 0)]}</strong> -{' '}
             <strong>{recipe?.mealType}</strong>.
           </AlertDialogDescription>
         </AlertDialogHeader>

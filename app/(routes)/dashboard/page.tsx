@@ -76,7 +76,7 @@ export default function DashboardPage() {
     >
       <motion.div variants={itemVariants} className="space-y-2">
         <h1 className="text-4xl font-bold tracking-tight">
-          Добре дошли, {user?.username}!
+          Добре дошли!
         </h1>
         <p className="text-xl text-muted-foreground">
           Управлявайте вашите рецепти, съставки и планове за хранене
