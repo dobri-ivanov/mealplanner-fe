@@ -3,7 +3,7 @@
 import { useParams } from 'next/navigation'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
-import { Plus, Trash2, Clock } from 'lucide-react'
+import { Plus, Trash2, Clock, Download } from 'lucide-react'
 import { mealPlanService, recipeService } from '@/services'
 import { useToast } from '@/hooks/use-toast'
 import { Button } from '@/components/ui/button'
@@ -15,16 +15,38 @@ import type { MealPlanRecipeDto, AddOrUpdateMealPlanRecipeDto } from '@/types'
 import { format } from 'date-fns'
 import { bg } from 'date-fns/locale/bg'
 import { useState } from 'react'
+import { exportMealPlanToPDF } from '@/lib/pdf-export'
 
 const DAYS_OF_WEEK = [
-  'Неделя',
   'Понеделник',
   'Вторник',
   'Сряда',
   'Четвъртък',
   'Петък',
   'Събота',
+  'Неделя',
 ]
+
+// Helper функции за конвертиране между UI индекси (0=Понеделник) и API индекси (0=Неделя)
+// UI: Понеделник=0, Вторник=1, ..., Неделя=6
+// API: Неделя=0, Понеделник=1, ..., Събота=6
+const uiToApiDay = (uiIndex: number): number => {
+  // UI 0 (Понеделник) -> API 1
+  // UI 1 (Вторник) -> API 2
+  // ...
+  // UI 5 (Събота) -> API 6
+  // UI 6 (Неделя) -> API 0
+  return uiIndex === 6 ? 0 : uiIndex + 1
+}
+
+const apiToUiDay = (apiIndex: number): number => {
+  // API 0 (Неделя) -> UI 6
+  // API 1 (Понеделник) -> UI 0
+  // API 2 (Вторник) -> UI 1
+  // ...
+  // API 6 (Събота) -> UI 5
+  return apiIndex === 0 ? 6 : apiIndex - 1
+}
 
 const MEAL_TYPES = ['Закуска', 'Обяд', 'Вечеря', 'Снакс']
 
@@ -34,7 +56,6 @@ export default function MealPlanDetailPage() {
   const { toast } = useToast()
   const queryClient = useQueryClient()
   const [isRecipeDialogOpen, setIsRecipeDialogOpen] = useState(false)
-  const [editingRecipe, setEditingRecipe] = useState<MealPlanRecipeDto | null>(null)
   const [deletingRecipe, setDeletingRecipe] = useState<MealPlanRecipeDto | null>(null)
   const [selectedDay, setSelectedDay] = useState<number | null>(null)
   const [selectedMealType, setSelectedMealType] = useState<string | null>(null)
@@ -83,27 +104,22 @@ export default function MealPlanDetailPage() {
     },
   })
 
-  const handleAddRecipe = (dayOfWeek: number, mealType: string) => {
-    setSelectedDay(dayOfWeek)
+  const handleAddRecipe = (uiDayIndex: number, mealType: string) => {
+    const apiDayIndex = uiToApiDay(uiDayIndex)
+    setSelectedDay(apiDayIndex)
     setSelectedMealType(mealType)
-    setEditingRecipe(null)
     setIsRecipeDialogOpen(true)
   }
 
-  const handleEditRecipe = (recipe: MealPlanRecipeDto) => {
-    setSelectedDay(recipe.dayOfWeek)
-    setSelectedMealType(recipe.mealType)
-    setEditingRecipe(recipe)
-    setIsRecipeDialogOpen(true)
-  }
 
   const handleDeleteRecipe = (recipe: MealPlanRecipeDto) => {
     setDeletingRecipe(recipe)
   }
 
-  const getRecipesForDayAndMeal = (dayOfWeek: number, mealType: string) => {
+  const getRecipesForDayAndMeal = (uiDayIndex: number, mealType: string) => {
+    const apiDayIndex = uiToApiDay(uiDayIndex)
     return recipes?.filter(
-      (r) => r.dayOfWeek === dayOfWeek && r.mealType === mealType
+      (r) => r.dayOfWeek === apiDayIndex && r.mealType === mealType
     ) || []
   }
 
@@ -153,12 +169,13 @@ export default function MealPlanDetailPage() {
                       <div className="flex items-center justify-between">
                         <h4 className="text-sm font-medium">{mealType}</h4>
                         <Button
-                          variant="ghost"
+                          variant="outline"
                           size="sm"
                           onClick={() => handleAddRecipe(dayIndex, mealType)}
-                          className="h-6 w-6 p-0"
+                          className="h-7 px-2 gap-1 text-xs"
                         >
-                          <Plus className="h-4 w-4" />
+                          <Plus className="h-3 w-3" />
+                          Добави
                         </Button>
                       </div>
                       {recipesLoading ? (
@@ -170,40 +187,33 @@ export default function MealPlanDetailPage() {
                               key={`${recipe.recipeId}-${recipe.dayOfWeek}-${recipe.mealType}`}
                               initial={{ opacity: 0, scale: 0.9 }}
                               animate={{ opacity: 1, scale: 1 }}
-                              className="p-2 bg-muted rounded text-sm"
+                              className="p-3 bg-background border border-border rounded-md text-sm"
                             >
-                              <div className="flex items-start justify-between">
-                                <div className="flex-1">
-                                  <p className="font-medium">{recipe.recipeName}</p>
-                                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="flex-1 min-w-0">
+                                  <p className="font-medium text-base">{recipe.recipeName}</p>
+                                  <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
                                     <Clock className="h-3 w-3" />
                                     {recipe.cookingTimeMinutes} мин
                                   </div>
                                 </div>
-                                <div className="flex gap-1">
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => handleEditRecipe(recipe)}
-                                    className="h-6 w-6 p-0"
-                                  >
-                                    Редактирай
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => handleDeleteRecipe(recipe)}
-                                    className="h-6 w-6 p-0 text-destructive"
-                                  >
-                                    <Trash2 className="h-3 w-3" />
-                                  </Button>
-                                </div>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleDeleteRecipe(recipe)}
+                                  className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10 flex-shrink-0"
+                                  title="Изтрий рецепта"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
                               </div>
                             </motion.div>
                           ))}
                         </div>
                       ) : (
-                        <p className="text-xs text-muted-foreground">Няма рецепта</p>
+                        <div className="p-2 bg-muted/50 rounded text-xs text-muted-foreground text-center border border-dashed">
+                          Няма рецепта. Кликнете "Добави" за да добавите рецепта.
+                        </div>
                       )}
                     </div>
                   )
@@ -218,7 +228,7 @@ export default function MealPlanDetailPage() {
         open={isRecipeDialogOpen}
         onOpenChange={setIsRecipeDialogOpen}
         mealPlanId={mealPlanId}
-        recipe={editingRecipe}
+        recipe={null}
         allRecipes={allRecipes || []}
         defaultDay={selectedDay}
         defaultMealType={selectedMealType}
